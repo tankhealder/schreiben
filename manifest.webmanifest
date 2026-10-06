@@ -1,0 +1,9 @@
+{
+  "name": "Kurrāsa – Arabisch-Schreibheft",
+  "short_name": "Kurrāsa",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#E9EEF6",
+  "theme_color": "#2B4EA6",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

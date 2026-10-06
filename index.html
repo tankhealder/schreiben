@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2B4EA6">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>Kurrāsa Schreibheft</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600&family=Rubik:wght@400;500;600&display=swap">
+<style>
+/* Layout: Schulheft – links Übungsauswahl, rechts liniertes Blatt mit rotem Rand (rechts, wie im arabischen Heft), unten Werkzeugleiste */
+:root{
+  --bg:#E9EEF6; --panel:#FFFFFF; --paper:#FBFCFE; --ink:#1D2E5C; --rule:#B7CAE8; --rule-soft:#D9E3F3;
+  --red:#D2453D; --text:#18213A; --muted:#5B6780; --chip:#E6ECF7; --accent:#2B4EA6; --accent-fg:#FFFFFF; --ok:#2F8F5B;
+  --font-ui:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-ar:"Noto Naskh Arabic","Amiri","Geeza Pro","Arabic Typesetting","Times New Roman",serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1220; --panel:#161E31; --paper:#131A2B; --ink:#E7EDFC; --rule:#34476E; --rule-soft:#223152;
+  --red:#FF7A6F; --text:#E5EAF4; --muted:#98A4BF; --chip:#202B45; --accent:#8EA9F3; --accent-fg:#0D1220; --ok:#5CCB8D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1220; --panel:#161E31; --paper:#131A2B; --ink:#E7EDFC; --rule:#34476E; --rule-soft:#223152;
+  --red:#FF7A6F; --text:#E5EAF4; --muted:#98A4BF; --chip:#202B45; --accent:#8EA9F3; --accent-fg:#0D1220; --ok:#5CCB8D; color-scheme:dark}
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size:15px;overflow:hidden;-webkit-user-select:none;user-select:none}
+.ar{font-family:var(--font-ar);direction:rtl;unicode-bidi:isolate}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.app{height:100%;display:grid;grid-template-columns:280px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:12px;padding-inline:16px;padding-block:12px;box-sizing:border-box}
+.top{grid-column:1/-1;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand .ar{font-size:30px;font-weight:600;color:var(--accent);line-height:1}
+.brand b{font-weight:600;font-size:17px}
+.brand small{color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:4px;background:var(--chip);padding:4px;border-radius:12px;margin-inline-start:auto}
+.tabs button{padding:8px 14px;border-radius:9px;font-weight:500;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--panel);color:var(--text);box-shadow:0 1px 3px rgb(0 0 0 / .12)}
+.pen{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.pen i{width:8px;height:8px;border-radius:50%;background:var(--rule)}
+.pen.on i{background:var(--ok)}
+
+.side{background:var(--panel);border-radius:16px;padding:14px;overflow:auto;display:flex;flex-direction:column;gap:12px;min-height:0}
+.label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:6px 11px;border-radius:999px;background:var(--chip);font-size:13px;font-weight:500}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.chip:disabled{opacity:.4;cursor:default}
+.note{font-size:13.5px;line-height:1.5;color:var(--muted);margin:0}
+.note .ar{color:var(--text);font-size:17px}
+.list{display:flex;flex-direction:column;gap:2px}
+.item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:10px;text-align:start;width:100%}
+.item:hover{background:var(--chip)}
+.item[aria-current="true"]{background:var(--chip);box-shadow:inset 3px 0 0 var(--accent)}
+.item .ar{font-size:21px;line-height:1.5;margin-inline-start:auto;order:2}
+.item .de{font-size:13.5px;color:var(--muted);order:1;min-width:0}
+.item .dot{order:0;width:7px;height:7px;border-radius:50%;flex:none;background:transparent;border:1.5px solid var(--rule)}
+.item.done .dot{background:var(--ok);border-color:var(--ok)}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;direction:rtl}
+.tile{aspect-ratio:1;max-width:100%;border-radius:10px;background:var(--chip);font-family:var(--font-ar);font-size:26px;display:grid;place-items:center;position:relative;line-height:1}
+.tile[aria-current="true"]{background:var(--accent);color:var(--accent-fg)}
+.tile.done::after{content:"";position:absolute;top:5px;left:5px;width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.own{display:flex;flex-direction:column;gap:8px}
+.own input{font:inherit;padding:10px 12px;border-radius:10px;border:1.5px solid var(--rule);background:var(--paper);color:var(--text);width:100%;box-sizing:border-box}
+.own input.ar{font-family:var(--font-ar);font-size:22px}
+.btn{padding:9px 14px;border-radius:10px;background:var(--accent);color:var(--accent-fg);font-weight:500}
+
+.main{display:flex;flex-direction:column;gap:10px;min-height:0;min-width:0}
+.prompt{background:var(--panel);border-radius:16px;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.prompt .big{font-size:40px;line-height:1.35;color:var(--ink);min-width:0}
+.prompt .big.hide{color:var(--muted);font-family:var(--font-ui);font-size:15px;direction:ltr}
+.prompt .meta{display:flex;flex-direction:column;gap:2px;min-width:0}
+.prompt .tr{font-size:14px;color:var(--muted);font-style:italic}
+.prompt .de{font-size:17px;font-weight:500}
+.prompt .spacer{flex:1}
+.dir{font-size:12px;color:var(--muted)}
+.ghost{padding:7px 12px;border-radius:9px;background:var(--chip);font-size:13px;font-weight:500}
+
+.stage{position:relative;flex:1;min-height:220px;border-radius:16px;overflow:hidden;touch-action:none;background:var(--paper);box-shadow:0 1px 0 var(--rule-soft) inset}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%}
+#over{pointer-events:none}
+
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:flex;background:var(--panel);border-radius:12px;padding:4px;gap:2px}
+.seg button{padding:8px 12px;border-radius:9px;font-size:13.5px;font-weight:500;color:var(--muted);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--chip);color:var(--text)}
+.seg button.red[aria-pressed="true"]{background:var(--red);color:#fff}
+.tools .grow{flex:1}
+.nav{display:flex;gap:6px}
+.nav button{padding:10px 16px;border-radius:12px;background:var(--panel);font-weight:500}
+.nav button.next{background:var(--accent);color:var(--accent-fg)}
+
+@media (max-width:860px){
+  body{overflow:auto}
+  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);height:auto;min-height:100%}
+  .tabs{margin-inline-start:0}
+  .side{max-height:none;overflow:visible}
+  .list{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:4px}
+  .item{width:auto;flex:none;background:var(--chip)}
+  .grid{grid-template-columns:repeat(8,1fr)}
+  .stage{min-height:62vh}
+  .prompt .big{font-size:32px}
+}
+.toast{position:absolute;left:50%;top:16px;transform:translate(-50%,-8px);opacity:0;pointer-events:none;background:var(--panel);border-radius:14px;padding:8px 18px;
+  display:flex;align-items:center;gap:12px;box-shadow:0 6px 24px rgb(0 0 0 / .14);transition:opacity .35s ease,transform .35s ease;max-width:calc(100% - 32px);box-sizing:border-box}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast .ar{font-size:28px;color:var(--ok);line-height:1.4}
+.toast .t{display:flex;flex-direction:column;font-size:13px;color:var(--muted)}
+.toast .t b{font-size:15px;color:var(--text);font-weight:500}
+.today{font-size:12px;color:var(--muted)}
+.progress{font-size:12.5px;color:var(--ok);font-weight:500}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="ar" lang="ar">كُرَّاسة</span><div><b>Kurrāsa</b> <small>Schreibheft für den Arabischkurs</small></div></div>
+    <div class="pen" id="pen"><i></i><span>Mit Stift oder Finger schreiben</span></div>
+    <span class="today" id="today"></span>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-words" data-tab="words">Wörter &amp; Sätze</button>
+      <button role="tab" id="tab-letters" data-tab="letters">Buchstaben</button>
+      <button role="tab" id="tab-own" data-tab="own">Eigenes Wort</button>
+    </div>
+  </header>
+
+  <aside class="side" id="side"></aside>
+
+  <section class="main">
+    <div class="prompt">
+      <div class="big ar" id="pBig" lang="ar"></div>
+      <div class="meta"><span class="de" id="pDe"></span><span class="tr" id="pTr"></span></div>
+      <div class="spacer"></div>
+      <div class="chips" id="forms" hidden></div>
+      <button class="ghost" id="speak" hidden>Anhören</button>
+      <span class="dir">← von rechts nach links</span>
+    </div>
+    <div class="stage" id="stage">
+      <canvas id="bg"></canvas><canvas id="ink"></canvas><canvas id="over"></canvas>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+    <div class="tools">
+      <div class="seg" aria-label="Vorlage">
+        <button id="mTrace" aria-pressed="true">Nachfahren</button>
+        <button id="mQuiz" aria-pressed="false">Aus dem Kopf</button>
+      </div>
+      <div class="seg"><button id="harakat" aria-pressed="true">Vokalzeichen</button></div>
+      <div class="seg"><button id="compare" class="red" aria-pressed="false">Vergleichen</button></div>
+      <div class="seg" aria-label="Werkzeug">
+        <button id="tPen" aria-pressed="true">Stift</button>
+        <button id="tErase" aria-pressed="false">Radierer</button>
+        <button id="undo">Rückgängig</button>
+        <button id="clear">Leeren</button>
+      </div>
+      <div class="seg"><button id="sound" aria-pressed="true">Ton</button></div>
+      <div class="grow"></div>
+      <div class="nav"><button id="prev">‹ Zurück</button><button id="next" class="next">Weiter ›</button></div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ---------- Inhalte ---------- */
+const SETS=[
+ {id:'basis',name:'Grundwörter',note:'Wörter, in denen alle Buchstaben vorkommen. Gut zum Aufwärmen.',items:[
+  ['بَيْت','bayt','Haus'],['بَاب','bāb','Tür'],['كِتَاب','kitāb','Buch'],['قَلَم','qalam','Stift'],['مَدْرَسَة','madrasa','Schule'],
+  ['سَيَّارَة','sayyāra','Auto'],['مَاء','māʾ','Wasser'],['شَمْس','šams','Sonne'],['قَمَر','qamar','Mond'],['وَلَد','walad','Junge'],
+  ['بِنْت','bint','Mädchen'],['أُمّ','umm','Mutter'],['أَب','ab','Vater'],['أُخْت','uḫt','Schwester'],['صَدِيق','ṣadīq','Freund'],
+  ['مَدِينَة','madīna','Stadt'],['طَالِب','ṭālib','Student'],['مُعَلِّم','muʿallim','Lehrer'],['شَاي','šāy','Tee'],['قَهْوَة','qahwa','Kaffee'],
+  ['خُبْز','ḫubz','Brot'],['بَحْر','baḥr','Meer'],['عَيْن','ʿayn','Auge'],['يَد','yad','Hand'],['غُرْفَة','ġurfa','Zimmer'],
+  ['ظَهْر','ẓahr','Rücken'],['ضَيْف','ḍayf','Gast'],['ذَهَب','ḏahab','Gold'],['ثَلْج','ṯalǧ','Schnee'],['جَمِيل','ǧamīl','schön'],
+  ['حُبّ','ḥubb','Liebe'],['فِيل','fīl','Elefant'],['زَيْت','zayt','Öl'],['شُكْرًا','šukran','Danke'],['مَرْحَبًا','marḥaban','Hallo']]},
+ {id:'art',name:'Artikel ال',note:'<span class="ar">ال</span> ist der bestimmte Artikel. Bei Mondbuchstaben hört man das l (al-qamar). Bei Sonnenbuchstaben verschmilzt das l mit dem nächsten Buchstaben, der eine Schadda bekommt (aš-šams). Geschrieben wird das <span class="ar">ل</span> immer.',items:[
+  ['الْقَمَر','al-qamar','der Mond (Mondbuchstabe)'],['الْكِتَاب','al-kitāb','das Buch (Mondbuchstabe)'],['الْبَيْت','al-bayt','das Haus (Mondbuchstabe)'],
+  ['الْبَاب','al-bāb','die Tür (Mondbuchstabe)'],['الْمَدْرَسَة','al-madrasa','die Schule (Mondbuchstabe)'],['الشَّمْس','aš-šams','die Sonne (Sonnenbuchstabe)'],
+  ['السَّيَّارَة','as-sayyāra','das Auto (Sonnenbuchstabe)'],['الدَّرْس','ad-dars','die Lektion (Sonnenbuchstabe)'],['الطَّالِب','aṭ-ṭālib','der Student (Sonnenbuchstabe)'],
+  ['الرَّجُل','ar-raǧul','der Mann (Sonnenbuchstabe)'],['النَّافِذَة','an-nāfiḏa','das Fenster (Sonnenbuchstabe)']]},
+ {id:'pron',name:'Pronomen',note:'Die Personalpronomen. „Du“ zu einem Mann (<span class="ar">أَنْتَ</span>) und zu einer Frau (<span class="ar">أَنْتِ</span>) schreibt man gleich. Nur der Vokal ist anders.',items:[
+  ['أَنَا','anā','ich'],['أَنْتَ','anta','du (m)'],['أَنْتِ','anti','du (w)'],['هُوَ','huwa','er'],['هِيَ','hiya','sie (Sg.)'],
+  ['نَحْنُ','naḥnu','wir'],['أَنْتُمْ','antum','ihr'],['هُمْ','hum','sie (Pl.)']]},
+ {id:'poss',name:'Besitz-Endungen',note:'Besitz wird als Endung angehängt: <span class="ar">كِتَاب + ي = كِتَابِي</span> (mein Buch). Endet ein Wort auf <span class="ar">ة</span>, wird daraus ein <span class="ar">ت</span>: <span class="ar">مَدْرَسَة ← مَدْرَسَتِي</span>.',items:[
+  ['كِتَابِي','kitābī','mein Buch'],['كِتَابُكَ','kitābuka','dein Buch (m)'],['كِتَابُكِ','kitābuki','dein Buch (w)'],['كِتَابُهُ','kitābuhu','sein Buch'],
+  ['كِتَابُهَا','kitābuhā','ihr Buch'],['كِتَابُنَا','kitābunā','unser Buch'],['بَيْتُنَا','baytunā','unser Haus'],['مَدْرَسَتِي','madrasatī','meine Schule'],
+  ['سَيَّارَتُهَا','sayyāratuhā','ihr Auto']]},
+ {id:'fem',name:'Weiblich mit ة',note:'Die weibliche Form bekommt meist ein <span class="ar">ة</span> (Tā’ marbūṭa) am Ende. Es wird nur von rechts angebunden.',items:[
+  ['طَالِب طَالِبَة','ṭālib – ṭāliba','Student – Studentin'],['مُعَلِّم مُعَلِّمَة','muʿallim – muʿallima','Lehrer – Lehrerin'],
+  ['صَدِيق صَدِيقَة','ṣadīq – ṣadīqa','Freund – Freundin'],['كَبِير كَبِيرَة','kabīr – kabīra','groß (m – w)'],
+  ['صَغِير صَغِيرَة','ṣaġīr – ṣaġīra','klein (m – w)'],['جَدِيد جَدِيدَة','ǧadīd – ǧadīda','neu (m – w)'],['جَمِيل جَمِيلَة','ǧamīl – ǧamīla','schön (m – w)']]},
+ {id:'satz',name:'Kurze Sätze',note:'Nominalsätze brauchen kein „ist“: <span class="ar">الْبَيْتُ كَبِيرٌ</span> heißt „Das Haus ist groß“. Das Fragezeichen ist gespiegelt: <span class="ar">؟</span>',items:[
+  ['هَذَا بَيْتٌ','hāḏā baytun','Das ist ein Haus.'],['هَذِهِ سَيَّارَةٌ','hāḏihi sayyāratun','Das ist ein Auto.'],
+  ['الْبَيْتُ كَبِيرٌ','al-baytu kabīrun','Das Haus ist groß.'],['الْكِتَابُ جَدِيدٌ','al-kitābu ǧadīdun','Das Buch ist neu.'],
+  ['هُوَ طَالِبٌ','huwa ṭālibun','Er ist Student.'],['هِيَ مُعَلِّمَةٌ','hiya muʿallimatun','Sie ist Lehrerin.'],
+  ['أَنَا مِنْ أَلْمَانِيَا','anā min almāniyā','Ich bin aus Deutschland.'],['أَيْنَ الْكِتَابُ؟','ayna l-kitābu?','Wo ist das Buch?'],
+  ['كَيْفَ حَالُكَ؟','kayfa ḥāluka?','Wie geht es dir? (m)'],['مَا اسْمُكِ؟','mā smuki?','Wie heißt du? (w)']]}
+];
+// [Zeichen, Name, Tipp, verbindet nach links]
+const LETTERS=[
+ ['ا','Alif','Senkrecht von oben nach unten. Verbindet sich nicht nach links.',0],
+ ['ب','Bā’','Flache Schale von rechts nach links, Punkt darunter zuletzt.',1],
+ ['ت','Tā’','Wie Bā’, zwei Punkte darüber.',1],
+ ['ث','Ṯā’','Wie Bā’, drei Punkte darüber.',1],
+ ['ج','Ǧīm','Kurzer Strich nach links, schräg zurück, dann im Bogen unter die Linie. Punkt in den Bauch.',1],
+ ['ح','Ḥā’','Wie Ǧīm, ohne Punkt.',1],
+ ['خ','Ḫā’','Wie Ḥā’, Punkt darüber.',1],
+ ['د','Dāl','Kleiner Haken: schräg hinunter, dann nach links. Verbindet nicht nach links.',0],
+ ['ذ','Ḏāl','Wie Dāl, Punkt darüber.',0],
+ ['ر','Rā’','Kurzer Bogen von oben nach links unter die Linie. Verbindet nicht nach links.',0],
+ ['ز','Zāy','Wie Rā’, Punkt darüber.',0],
+ ['س','Sīn','Drei kleine Zähne von rechts nach links, am Ende eine tiefe Schale.',1],
+ ['ش','Šīn','Wie Sīn, drei Punkte darüber.',1],
+ ['ص','Ṣād','Zuerst die liegende Schlaufe, dann ein kleiner Zahn, am Ende die tiefe Schale.',1],
+ ['ض','Ḍād','Wie Ṣād, Punkt darüber.',1],
+ ['ط','Ṭā’','Erst die Schlaufe auf der Linie, dann den senkrechten Strich von oben.',1],
+ ['ظ','Ẓā’','Wie Ṭā’, Punkt darüber.',1],
+ ['ع','ʿAyn','Oben ein kleiner offener Bogen, allein und am Ende dann ein großer Bogen unter die Linie.',1],
+ ['غ','Ġayn','Wie ʿAyn, Punkt darüber.',1],
+ ['ف','Fā’','Kleiner runder Kopf, dann flach nach links. Ein Punkt darüber.',1],
+ ['ق','Qāf','Runder Kopf, dann tiefe runde Schale unter die Linie. Zwei Punkte darüber.',1],
+ ['ك','Kāf','Senkrecht hinunter, flach nach links, kleines Hamza-Zeichen hinein.',1],
+ ['ل','Lām','Senkrecht hinunter, dann in runder Schale unter die Linie.',1],
+ ['م','Mīm','Kleiner Kreis auf der Linie, allein und am Ende mit Schwanz nach unten.',1],
+ ['ن','Nūn','Runde Schale, tiefer als bei Bā’. Punkt darüber.',1],
+ ['ه','Hā’','Ändert die Form stark: allein ein Kreis, am Anfang und in der Mitte ganz anders. Genau hinsehen.',1],
+ ['و','Wāw','Kleiner Kreis, dann Bogen unter die Linie. Verbindet nicht nach links.',0],
+ ['ي','Yā’','Allein und am Ende ein geschwungener Bogen nach unten, zwei Punkte darunter.',1],
+ ['ة','Tā’ marbūṭa','Steht nur am Wortende. Wie Hā’ mit zwei Punkten darüber.',2],
+ ['لا','Lām-Alif','Lām und Alif verschmelzen zu einem eigenen Zeichen. Verbindet nicht nach links.',0]
+];
+const FORMS=[['iso','allein'],['ini','am Anfang'],['med','in der Mitte'],['fin','am Ende']];
+const ZWJ='‍';
+function letterForm(L,f){const [c,, ,conn]=L;
+  if(f==='iso')return c;
+  if(f==='fin')return ZWJ+c;
+  if(conn!==1)return f==='ini'?c:ZWJ+c;
+  return f==='ini'?c+ZWJ:ZWJ+c+ZWJ;}
+const strip=s=>s.replace(/[ً-ْٰ]/g,'');
+
+/* ---------- Speicher (nur Komfort) ---------- */
+const store={get(k,d){try{const v=localStorage.getItem('kurrasa.'+k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem('kurrasa.'+k,JSON.stringify(v))}catch(e){}}};
+const S=Object.assign({tab:'words',set:'basis',idx:0,letter:1,form:'iso',quiz:false,harakat:true,sound:true},store.get('ui',{}));
+S.compare=false;S.tool='pen';S.own=null;
+let done=new Set(store.get('done',[]));
+let ownList=store.get('own',[]);
+const save=()=>store.set('ui',{tab:S.tab,set:S.set,idx:S.idx,letter:S.letter,form:S.form,quiz:S.quiz,harakat:S.harakat,sound:S.sound});
+
+/* ---------- aktuelles Element ---------- */
+function current(){
+  if(S.tab==='letters'){const L=LETTERS[S.letter];
+    return {key:'l:'+S.letter+':'+S.form,doneKey:'l:'+S.letter,ar:letterForm(L,S.form),tr:L[1],de:'Form: '+FORMS.find(f=>f[0]===S.form)[1],tip:L[2],letter:true};}
+  if(S.tab==='own'){if(!S.own)return {key:'o:',ar:'',tr:'',de:'Gib links ein Wort ein'};
+    return {key:'o:'+S.own.ar,doneKey:null,ar:S.own.ar,tr:'',de:S.own.de||'Eigenes Wort'};}
+  const set=SETS.find(s=>s.id===S.set)||SETS[0];const it=set.items[Math.min(S.idx,set.items.length-1)];
+  return {key:'w:'+set.id+':'+S.idx,doneKey:'w:'+set.id+':'+S.idx,ar:it[0],tr:it[1],de:it[2]};
+}
+const shown=a=>S.harakat?a:strip(a);
+
+/* ---------- Seitenleiste ---------- */
+const side=document.getElementById('side');
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function renderSide(){
+  let h='';
+  if(S.tab==='words'){
+    const set=SETS.find(s=>s.id===S.set);
+    h+='<div class="label">Thema</div><div class="chips">'+SETS.map(s=>`<button class="chip" data-set="${s.id}" aria-pressed="${s.id===S.set}">${s.name}</button>`).join('')+'</div>';
+    const nDone=set.items.filter((_,i)=>done.has('w:'+set.id+':'+i)).length;
+    h+=`<p class="note">${set.note}</p><div class="label">Übungen <span class="progress">· ${nDone} von ${set.items.length} geübt</span></div><div class="list">`;
+    set.items.forEach((it,i)=>{const k='w:'+set.id+':'+i;
+      h+=`<button class="item${done.has(k)?' done':''}" data-idx="${i}" aria-current="${i===S.idx}"><span class="dot"></span><span class="de">${esc(it[2])}</span>${S.quiz?'':`<span class="ar" lang="ar">${esc(shown(it[0]))}</span>`}</button>`;});
+    h+='</div>';
+  } else if(S.tab==='letters'){
+    const L=LETTERS[S.letter];
+    h+='<div class="label">Buchstabe wählen</div><div class="grid">'+LETTERS.map((l,i)=>`<button class="tile${done.has('l:'+i)?' done':''}" data-letter="${i}" aria-current="${i===S.letter}" aria-label="${l[1]}">${l[0]}</button>`).join('')+'</div>';
+    h+=`<div class="label">${L[1]}</div><p class="note">${L[2]}</p>`;
+  } else {
+    h+=`<div class="label">Eigenes Wort üben</div><p class="note">Zum Beispiel neue Vokabeln aus dem Kurs. Für die Eingabe die arabische Tastatur in den Tastatur-Einstellungen des Tablets hinzufügen.</p>
+    <form class="own" id="ownForm"><input id="ownAr" class="ar" lang="ar" dir="rtl" placeholder="مَكْتَب" autocomplete="off"><input id="ownDe" placeholder="Bedeutung (optional), z. B. Schreibtisch" autocomplete="off"><button class="btn" type="submit">Üben</button></form>`;
+    if(ownList.length){h+='<div class="label">Zuletzt geübt</div><div class="list">'+ownList.map((o,i)=>`<button class="item" data-own="${i}" aria-current="${S.own&&S.own.ar===o.ar}"><span class="dot"></span><span class="de">${esc(o.de||'')}</span><span class="ar" lang="ar">${esc(shown(o.ar))}</span></button>`).join('')+'</div>';}
+  }
+  side.innerHTML=h;
+  const cur=side.querySelector('[aria-current="true"]');if(cur)cur.scrollIntoView({block:'nearest',inline:'nearest'});
+}
+side.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.set){S.set=b.dataset.set;S.idx=0;}
+  else if(b.dataset.idx!=null){S.idx=+b.dataset.idx;}
+  else if(b.dataset.letter!=null){S.letter=+b.dataset.letter;if(!formOk(S.form))S.form='iso';}
+  else if(b.dataset.own!=null){S.own=ownList[+b.dataset.own];}
+  else return;
+  go();});
+side.addEventListener('submit',e=>{e.preventDefault();const ar=document.getElementById('ownAr').value.trim();const de=document.getElementById('ownDe').value.trim();
+  if(!ar)return;S.own={ar,de};ownList=[S.own,...ownList.filter(o=>o.ar!==ar)].slice(0,20);store.set('own',ownList);go();});
+
+function formOk(f){const c=LETTERS[S.letter][3];if(c===1)return true;if(c===2)return f==='iso'||f==='fin';return true;}
+
+/* ---------- Kopfzeile / Aufgabe ---------- */
+const $=id=>document.getElementById(id);
+function renderPrompt(){
+  const c=current();
+  const big=$('pBig');
+  if(S.quiz&&!S.compare&&!c.letter&&c.ar){big.textContent='Aus dem Kopf schreiben, dann „Vergleichen“';big.classList.add('hide');}
+  else{big.textContent=c.ar?shown(c.ar):'';big.classList.remove('hide');}
+  $('pDe').textContent=c.de;$('pTr').textContent=c.tr;
+  const fm=$('forms');fm.hidden=S.tab!=='letters';
+  if(S.tab==='letters'){const conn=LETTERS[S.letter][3];
+    fm.innerHTML=FORMS.map(([k,n])=>{const dis=(conn===2&&(k==='ini'||k==='med'));return `<button class="chip" data-form="${k}" aria-pressed="${k===S.form}" ${dis?'disabled':''}>${n}</button>`}).join('');}
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===S.tab));
+  $('mTrace').setAttribute('aria-pressed',!S.quiz);$('mQuiz').setAttribute('aria-pressed',S.quiz);
+  $('harakat').setAttribute('aria-pressed',S.harakat);$('compare').setAttribute('aria-pressed',S.compare);
+  $('tPen').setAttribute('aria-pressed',S.tool==='pen');$('tErase').setAttribute('aria-pressed',S.tool==='erase');
+  $('speak').hidden=!('speechSynthesis' in window)||!c.ar;
+  $('sound').setAttribute('aria-pressed',S.sound);
+}
+$('forms').addEventListener('click',e=>{const b=e.target.closest('[data-form]');if(!b||b.disabled)return;S.form=b.dataset.form;go();});
+document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;S.tab=b.dataset.tab;go();});
+$('mTrace').onclick=()=>{S.quiz=false;S.compare=false;go(true)};
+$('mQuiz').onclick=()=>{S.quiz=true;S.compare=false;go(true)};
+$('harakat').onclick=()=>{S.harakat=!S.harakat;go(true)};
+$('compare').onclick=()=>{S.compare=!S.compare;renderPrompt();drawOver();};
+$('tPen').onclick=()=>{S.tool='pen';renderPrompt()};
+$('tErase').onclick=()=>{S.tool='erase';renderPrompt()};
+$('undo').onclick=()=>{const p=page();if(p.hist.length){p.strokes=p.hist.pop();drawInk();}};
+$('clear').onclick=()=>{const p=page();if(p.strokes.length){p.hist.push(p.strokes.slice());p.strokes=[];drawInk();}};
+$('prev').onclick=()=>step(-1);$('next').onclick=()=>step(1);
+$('speak').onclick=()=>{try{const c=current();speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(c.ar.replace(/‍/g,''));u.lang='ar-SA';u.rate=.8;
+  const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.startsWith('ar'));if(v)u.voice=v;speechSynthesis.speak(u);}catch(e){}};
+/* ---------- Lob & Klang ---------- */
+const PRAISE=[['أَحْسَنْتِ','aḥsanti','Gut gemacht'],['مُمْتَاز','mumtāz','Ausgezeichnet'],['جَمِيل جِدًّا','ǧamīl ǧiddan','Sehr schön'],
+  ['خَطٌّ جَمِيل','ḫaṭṭun ǧamīl','Schöne Schrift'],['رَائِع','rāʾiʿ','Toll'],['أَنْتِ رَائِعَة','anti rāʾiʿa','Du bist toll']];
+const BIG=['عَمَلٌ رَائِع','ʿamalun rāʾiʿ','Großartige Arbeit'];
+let lastPraise=-1,toastT=null,AC=null;
+function bell(f,t,vol){const o=AC.createOscillator(),o2=AC.createOscillator(),g=AC.createGain(),g2=AC.createGain();
+  o.type='sine';o.frequency.value=f;o2.type='sine';o2.frequency.value=f*2.01;g2.gain.value=.25;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+1.6);
+  o.connect(g);o2.connect(g2);g2.connect(g);g.connect(AC.destination);o.start(t);o2.start(t);o.stop(t+1.7);o2.stop(t+1.7);}
+function chime(big){if(!S.sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();
+  const t=AC.currentTime+.02;const notes=big?[523.25,659.25,783.99,1046.5]:[783.99,1174.66];
+  notes.forEach((f,i)=>bell(f,t+i*(big?.12:.1),big?.09:.1));}catch(e){}}
+function toast(p,sub){const el=$('toast');
+  el.innerHTML=`<span class="ar" lang="ar">${p[0]}</span><span class="t"><b>${sub||p[2]}</b>${p[1]}${sub?' · '+p[2]:''}</span>`;
+  el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2200);}
+function today(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+let days=store.get('days',{});
+function renderToday(){const n=days[today()]||0;$('today').textContent=n?`Heute: ${n} geübt`:'';}
+function praise(big,setName){
+  const k=today();days={[k]:(days[k]||0)+1};store.set('days',days);renderToday();
+  chime(big);
+  if(big){toast(BIG,'Thema „'+setName+'“ geschafft');return;}
+  let i;do{i=Math.floor(Math.random()*PRAISE.length)}while(i===lastPraise);lastPraise=i;toast(PRAISE[i]);
+}
+$('sound').onclick=()=>{S.sound=!S.sound;save();renderPrompt();if(S.sound)chime(false);};
+
+function step(d){
+  const wrote=d>0&&page().strokes.length>=3;let finished=null;
+  if(S.tab==='words'){const set=SETS.find(s=>s.id===S.set);let i=S.idx+d;let si=SETS.indexOf(set);
+    if(wrote&&i>=set.items.length&&set.items.every((_,j)=>done.has('w:'+set.id+':'+j)))finished=set.name;
+    if(i>=set.items.length){si=(si+1)%SETS.length;S.set=SETS[si].id;i=0;}
+    if(i<0){si=(si-1+SETS.length)%SETS.length;S.set=SETS[si].id;i=SETS[si].items.length-1;}
+    S.idx=i;}
+  else if(S.tab==='letters'){const order=FORMS.map(f=>f[0]).filter(formOk);let fi=order.indexOf(S.form)+d;
+    if(fi>=order.length){S.letter=(S.letter+1)%LETTERS.length;S.form='iso';}
+    else if(fi<0){S.letter=(S.letter-1+LETTERS.length)%LETTERS.length;const o2=FORMS.map(f=>f[0]).filter(formOk);S.form=o2[o2.length-1];}
+    else S.form=order[fi];}
+  else{if(!ownList.length)return;let i=ownList.findIndex(o=>S.own&&o.ar===S.own.ar)+d;i=(i+ownList.length)%ownList.length;S.own=ownList[i];}
+  go();
+  if(wrote)praise(!!finished,finished);
+}
+function go(keepCompare){if(!keepCompare)S.compare=false;save();renderSide();renderPrompt();layout();drawBg();drawInk();drawOver();}
+
+/* ---------- Zeichenfläche ---------- */
+const stage=$('stage'),cBg=$('bg'),cInk=$('ink'),cOver=$('over');
+const xBg=cBg.getContext('2d'),xInk=cInk.getContext('2d'),xOver=cOver.getContext('2d');
+let W=0,H=0,DPR=1,LAY={boxes:[],fs:60,asc:40,text:''};
+const pages=new Map();
+function page(){const k=current().key;let p=pages.get(k);if(!p){p={strokes:[],hist:[],w:W,h:H};pages.set(k,p);}
+  if(p.w&&(p.w!==W||p.h!==H)&&p.strokes.length){const sx=W/p.w,sy=H/p.h;p.strokes.forEach(s=>s.pts.forEach(q=>{q.x*=sx;q.y*=sy}));p.hist=[];}
+  p.w=W;p.h=H;return p;}
+function col(n){return getComputedStyle(document.documentElement).getPropertyValue('--'+n).trim();}
+function arFont(px){return `${px}px "Noto Naskh Arabic","Amiri","Geeza Pro","Arabic Typesetting",serif`;}
+function size(){const r=stage.getBoundingClientRect();DPR=window.devicePixelRatio||1;W=Math.round(r.width);H=Math.round(r.height);
+  [cBg,cInk,cOver].forEach(c=>{c.width=W*DPR;c.height=H*DPR;c.getContext('2d').setTransform(DPR,0,0,DPR,0,0);});
+  layout();drawBg();drawInk();drawOver();}
+function layout(){
+  const c=current();const text=c.ar?shown(c.ar):'';const boxes=[];const right=W-30,left=10;let fs;
+  xBg.direction='rtl';
+  if(c.letter){const cols=W>H*1.1?3:2,rows=cols===3?2:3;const bw=(right-left)/cols,bh=(H-12)/rows;
+    const ops=[.34,.2,.1];
+    for(let r=0;r<rows;r++)for(let k=0;k<cols;k++){const i=r*cols+k;boxes.push({x:right-(k+1)*bw,y:6+r*bh,w:bw,h:bh,op:S.quiz?0:(ops[i]||0),row:r});}
+    fs=Math.min(bh*.5,bw*.62);xBg.font=arFont(fs);const tw=xBg.measureText(text).width;if(tw>bw*.8)fs*=bw*.8/tw;}
+  else{const rows=H>540?4:3;const bh=(H-12)/rows;const ops=[.3,.14,0,0];
+    for(let r=0;r<rows;r++)boxes.push({x:left,y:6+r*bh,w:right-left,h:bh,op:S.quiz?0:ops[r],row:r});
+    fs=bh*.44;xBg.font=arFont(fs);const tw=text?xBg.measureText(text).width:0;if(tw>(right-left)*.9)fs*=(right-left)*.9/tw;}
+  xBg.font=arFont(fs);const m=xBg.measureText('ا');const asc=m.actualBoundingBoxAscent||fs*.7;
+  boxes.forEach(b=>b.base=b.y+b.h*.6);
+  LAY={boxes,fs,asc,text,right};
+}
+function drawBg(){
+  const x=xBg;x.clearRect(0,0,W,H);x.fillStyle=col('paper');x.fillRect(0,0,W,H);
+  const rule=col('rule'),soft=col('rule-soft'),ink=col('ink');
+  x.globalAlpha=.55;x.strokeStyle=col('red');x.lineWidth=1.5;x.beginPath();x.moveTo(W-20,0);x.lineTo(W-20,H);x.stroke();x.globalAlpha=1;
+  const rowsDone=new Set();
+  LAY.boxes.forEach((b,i)=>{
+    if(!rowsDone.has(b.row)){rowsDone.add(b.row);
+      x.setLineDash([]);x.strokeStyle=rule;x.lineWidth=1.5;x.beginPath();x.moveTo(10,b.base);x.lineTo(W-30,b.base);x.stroke();
+      x.setLineDash([5,6]);x.strokeStyle=soft;x.lineWidth=1;x.beginPath();x.moveTo(10,b.base-LAY.asc);x.lineTo(W-30,b.base-LAY.asc);x.stroke();
+      x.beginPath();x.moveTo(10,b.base+LAY.fs*.38);x.lineTo(W-30,b.base+LAY.fs*.38);x.stroke();}
+    if(current().letter&&b.x>12){x.setLineDash([3,7]);x.strokeStyle=soft;x.beginPath();x.moveTo(b.x,b.y+10);x.lineTo(b.x,b.y+b.h-10);x.stroke();}
+    if(b.op>0&&LAY.text){x.setLineDash([]);x.globalAlpha=b.op;x.fillStyle=ink;x.font=arFont(LAY.fs);x.direction='rtl';x.textAlign='center';x.textBaseline='alphabetic';
+      x.fillText(LAY.text,b.x+b.w/2,b.base);x.globalAlpha=1;}
+  });
+  x.setLineDash([]);
+}
+function drawOver(){xOver.clearRect(0,0,W,H);if(!S.compare||!LAY.text)return;
+  xOver.fillStyle=col('red');xOver.globalAlpha=.5;xOver.font=arFont(LAY.fs);xOver.direction='rtl';xOver.textAlign='center';
+  LAY.boxes.forEach(b=>xOver.fillText(LAY.text,b.x+b.w/2,b.base));xOver.globalAlpha=1;}
+
+/* Striche */
+const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+const sw=(s,p)=>s.w*(.4+.9*p);
+function part(x,s,i){const P=s.pts;x.lineCap='round';x.lineJoin='round';x.strokeStyle=x.fillStyle=col('ink');
+  if(i===0){x.beginPath();x.arc(P[0].x,P[0].y,sw(s,P[0].p)/2,0,7);x.fill();return;}
+  const a=i>=2?mid(P[i-2],P[i-1]):P[0],c=mid(P[i-1],P[i]);
+  x.lineWidth=sw(s,P[i-1].p);x.beginPath();x.moveTo(a.x,a.y);x.quadraticCurveTo(P[i-1].x,P[i-1].y,c.x,c.y);x.stroke();}
+function tail(x,s){const P=s.pts,n=P.length;if(n<2)return;const a=mid(P[n-2],P[n-1]);x.lineWidth=sw(s,P[n-1].p);x.beginPath();x.moveTo(a.x,a.y);x.lineTo(P[n-1].x,P[n-1].y);x.stroke();}
+function drawInk(){xInk.clearRect(0,0,W,H);page().strokes.forEach(s=>{for(let i=0;i<s.pts.length;i++)part(xInk,s,i);tail(xInk,s);});}
+
+let penSeen=false,active=null,cur=null,mode='draw',erased=false;
+function pt(e){const r=stage.getBoundingClientRect();let p=e.pressure;if(e.pointerType!=='pen'||!p)p=.5;return {x:e.clientX-r.left,y:e.clientY-r.top,p};}
+function eraseAt(q){const p=page();const r=16;const n=p.strokes.length;
+  p.strokes=p.strokes.filter(s=>!s.pts.some(a=>Math.hypot(a.x-q.x,a.y-q.y)<r+s.w));if(p.strokes.length!==n){erased=true;drawInk();}}
+let wake=null;
+stage.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='pen'&&!penSeen){penSeen=true;$('pen').classList.add('on');$('pen').querySelector('span').textContent='Stift erkannt · Finger malt nicht';}
+  if(penSeen&&e.pointerType==='touch')return;
+  if(active!==null)return;
+  e.preventDefault();try{stage.setPointerCapture(e.pointerId)}catch(_){}
+  active=e.pointerId;
+  if(!wake&&navigator.wakeLock){navigator.wakeLock.request('screen').then(w=>{wake=w;w.addEventListener('release',()=>wake=null)}).catch(()=>{});}
+  const p=page();p.hist.push(p.strokes.slice());if(p.hist.length>60)p.hist.shift();
+  mode=(S.tool==='erase'||(e.buttons&32)||(e.pointerType==='pen'&&(e.buttons&2)))?'erase':'draw';
+  if(mode==='draw'){cur={w:Math.max(2.5,Math.min(12,LAY.fs*.05)),pts:[pt(e)]};p.strokes.push(cur);part(xInk,cur,0);}
+  else{erased=false;eraseAt(pt(e));}
+});
+stage.addEventListener('pointermove',e=>{if(e.pointerId!==active)return;
+  const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
+  for(const ev of (evs.length?evs:[e])){const q=pt(ev);
+    if(mode==='draw'){const l=cur.pts[cur.pts.length-1];if(Math.hypot(l.x-q.x,l.y-q.y)<.8)continue;cur.pts.push(q);part(xInk,cur,cur.pts.length-1);}
+    else eraseAt(q);}
+});
+function end(e){if(e.pointerId!==active)return;active=null;const p=page();
+  if(mode==='draw'&&cur){tail(xInk,cur);cur=null;const c=current();
+    if(c.doneKey&&p.strokes.length>=3&&!done.has(c.doneKey)){done.add(c.doneKey);store.set('done',[...done]);renderSide();}}
+  else if(!erased)p.hist.pop();}
+stage.addEventListener('pointerup',end);stage.addEventListener('pointercancel',end);
+stage.addEventListener('contextmenu',e=>e.preventDefault());
+
+new ResizeObserver(()=>{const r=stage.getBoundingClientRect();if(Math.round(r.width)!==W||Math.round(r.height)!==H)size();}).observe(stage);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{drawBg();drawInk();drawOver();});
+new MutationObserver(()=>{drawBg();drawInk();drawOver();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+renderSide();renderPrompt();renderToday();size();
+if(document.fonts){document.fonts.load(arFont(40),'كتاب').then(()=>{layout();drawBg();drawOver();}).catch(()=>{});
+  document.fonts.ready.then(()=>{layout();drawBg();drawOver();});}
+</script>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
+</body>
+</html>
