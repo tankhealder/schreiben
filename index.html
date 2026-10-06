@@ -96,16 +96,34 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .nav button{padding:10px 16px;border-radius:12px;background:var(--panel);font-weight:500}
 .nav button.next{background:var(--accent);color:var(--accent-fg)}
 
+.sheetbtns{position:absolute;left:10px;top:10px;display:flex;gap:6px;z-index:2}
+.sheetbtns button{padding:8px 12px;border-radius:10px;background:var(--panel);color:var(--text);font-size:13.5px;font-weight:500;box-shadow:0 1px 4px rgb(0 0 0 / .12)}
+
+/* Hochformat / schmal: alles passt auf einen Bildschirm, Listen wischt man seitlich */
 @media (max-width:860px){
-  body{overflow:auto}
-  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);height:auto;min-height:100%}
-  .tabs{margin-inline-start:0}
-  .side{max-height:none;overflow:visible}
-  .list{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:4px}
-  .item{width:auto;flex:none;background:var(--chip)}
-  .grid{grid-template-columns:repeat(8,1fr)}
-  .stage{min-height:62vh}
-  .prompt .big{font-size:32px}
+  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);gap:8px;padding-block:8px}
+  .top{gap:8px 12px}
+  .brand small,.pen{display:none}
+  .tabs{margin-inline-start:auto}
+  .side{overflow:hidden;padding:10px 12px;gap:8px}
+  .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .chip{flex:none}
+  .note{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;font-size:13px}
+  .note.open{display:block}
+  .side > .label:not(:first-child){display:none}
+  .list{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:2px;scrollbar-width:none}
+  .item{width:auto;flex:none;background:var(--chip);padding:4px 10px}
+  .item .ar{font-size:19px}
+  .grid{display:flex;overflow-x:auto;gap:6px;scrollbar-width:none}
+  .tile{flex:none;width:46px;height:46px;font-size:24px}
+  .own{flex-direction:row;flex-wrap:wrap}
+  .own input{flex:1 1 140px;width:auto}
+  .stage{min-height:0}
+  .prompt{padding:6px 12px;gap:8px 12px}
+  .prompt .big{font-size:30px}
+  .dir{display:none}
+  .seg button{padding:7px 10px}
+  .nav button{padding:9px 14px}
 }
 .toast{position:absolute;left:50%;top:16px;transform:translate(-50%,-8px);opacity:0;pointer-events:none;background:var(--panel);border-radius:14px;padding:8px 18px;
   display:flex;align-items:center;gap:12px;box-shadow:0 6px 24px rgb(0 0 0 / .14);transition:opacity .35s ease,transform .35s ease;max-width:calc(100% - 32px);box-sizing:border-box}
@@ -145,6 +163,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
     </div>
     <div class="stage" id="stage">
       <canvas id="bg"></canvas><canvas id="ink"></canvas><canvas id="over"></canvas>
+      <div class="sheetbtns"><button id="clear">Alles löschen</button><button id="undo">↶ Rückgängig</button></div>
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
     </div>
     <div class="tools">
@@ -157,8 +176,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
       <div class="seg" aria-label="Werkzeug">
         <button id="tPen" aria-pressed="true">Stift</button>
         <button id="tErase" aria-pressed="false">Radierer</button>
-        <button id="undo">Rückgängig</button>
-        <button id="clear">Leeren</button>
       </div>
       <div class="seg"><button id="sound" aria-pressed="true">Ton</button></div>
       <div class="grow"></div>
@@ -288,7 +305,8 @@ function renderSide(){
   side.innerHTML=h;
   const cur=side.querySelector('[aria-current="true"]');if(cur)cur.scrollIntoView({block:'nearest',inline:'nearest'});
 }
-side.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+side.addEventListener('click',e=>{const n=e.target.closest('.note');if(n){n.classList.toggle('open');return;}
+  const b=e.target.closest('button');if(!b)return;
   if(b.dataset.set){S.set=b.dataset.set;S.idx=0;}
   else if(b.dataset.idx!=null){S.idx=+b.dataset.idx;}
   else if(b.dataset.letter!=null){S.letter=+b.dataset.letter;if(!formOk(S.form))S.form='iso';}
@@ -372,7 +390,8 @@ function step(d){
   go();
   if(wrote)praise(!!finished,finished);
 }
-function go(keepCompare){if(!keepCompare)S.compare=false;save();renderSide();renderPrompt();layout();drawBg();drawInk();drawOver();}
+// Beim Wechsel zu einer anderen Übung oder einem anderen Reiter beginnt immer ein leeres Blatt
+function go(keepCompare){if(!keepCompare){S.compare=false;pages.clear();}save();renderSide();renderPrompt();layout();drawBg();drawInk();drawOver();}
 
 /* ---------- Zeichenfläche ---------- */
 const stage=$('stage'),cBg=$('bg'),cInk=$('ink'),cOver=$('over');
@@ -437,6 +456,7 @@ function eraseAt(q){const p=page();const r=16;const n=p.strokes.length;
   p.strokes=p.strokes.filter(s=>!s.pts.some(a=>Math.hypot(a.x-q.x,a.y-q.y)<r+s.w));if(p.strokes.length!==n){erased=true;drawInk();}}
 let wake=null;
 stage.addEventListener('pointerdown',e=>{
+  if(e.target.closest('button'))return;
   if(e.pointerType==='pen'&&!penSeen){penSeen=true;$('pen').classList.add('on');$('pen').querySelector('span').textContent='Stift erkannt · Finger malt nicht';}
   if(penSeen&&e.pointerType==='touch')return;
   if(active!==null)return;
