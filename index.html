@@ -74,7 +74,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .main{display:flex;flex-direction:column;gap:10px;min-height:0;min-width:0}
 .prompt{background:var(--panel);border-radius:16px;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .prompt .big{font-size:40px;line-height:1.35;color:var(--ink);min-width:0}
-.prompt .big.hide{color:var(--muted);font-family:var(--font-ui);font-size:15px;direction:ltr}
+.prompt .big.hide{color:var(--text);font-family:var(--font-ui);font-size:26px;font-weight:600;direction:ltr;line-height:1.3}
 .prompt .meta{display:flex;flex-direction:column;gap:2px;min-width:0}
 .prompt .tr{font-size:14px;color:var(--muted);font-style:italic}
 .prompt .de{font-size:17px;font-weight:500}
@@ -272,7 +272,7 @@ const save=()=>store.set('ui',{tab:S.tab,set:S.set,idx:S.idx,letter:S.letter,for
 /* ---------- aktuelles Element ---------- */
 function current(){
   if(S.tab==='letters'){const L=LETTERS[S.letter];
-    return {key:'l:'+S.letter+':'+S.form,doneKey:'l:'+S.letter,ar:letterForm(L,S.form),tr:L[1],de:'Form: '+FORMS.find(f=>f[0]===S.form)[1],tip:L[2],letter:true};}
+    return {key:'l:'+S.letter+':'+S.form,doneKey:'l:'+S.letter,ar:letterForm(L,S.form),tr:L[1],de:'Form: '+FORMS.find(f=>f[0]===S.form)[1],formName:FORMS.find(f=>f[0]===S.form)[1],tip:L[2],letter:true};}
   if(S.tab==='own'){if(!S.own)return {key:'o:',ar:'',tr:'',de:'Gib links ein Wort ein'};
     return {key:'o:'+S.own.ar,doneKey:null,ar:S.own.ar,tr:'',de:S.own.de||'Eigenes Wort'};}
   const set=SETS.find(s=>s.id===S.set)||SETS[0];const it=set.items[Math.min(S.idx,set.items.length-1)];
@@ -294,9 +294,9 @@ function renderSide(){
       h+=`<button class="item${done.has(k)?' done':''}" data-idx="${i}" aria-current="${i===S.idx}"><span class="dot"></span><span class="de">${esc(it[2])}</span>${S.quiz?'':`<span class="ar" lang="ar">${esc(shown(it[0]))}</span>`}</button>`;});
     h+='</div>';
   } else if(S.tab==='letters'){
-    const L=LETTERS[S.letter];
-    h+='<div class="label">Buchstabe wählen</div><div class="grid">'+LETTERS.map((l,i)=>`<button class="tile${done.has('l:'+i)?' done':''}" data-letter="${i}" aria-current="${i===S.letter}" aria-label="${l[1]}">${l[0]}</button>`).join('')+'</div>';
-    h+=`<div class="label">${L[1]}</div><p class="note">${L[2]}</p>`;
+    const L=LETTERS[S.letter];const hide=S.quiz&&!S.compare;
+    h+='<div class="label">Buchstabe wählen</div><div class="grid">'+LETTERS.map((l,i)=>`<button class="tile${done.has('l:'+i)?' done':''}" data-letter="${i}" aria-current="${i===S.letter&&!hide}" aria-label="${l[1]}">${l[0]}</button>`).join('')+'</div>';
+    h+=hide?`<p class="note">Abfrage: „Weiter“ stellt eine zufällige Aufgabe.</p>`:`<div class="label">${L[1]}</div><p class="note">${L[2]}</p>`;
   } else {
     h+=`<div class="label">Eigenes Wort üben</div><p class="note">Zum Beispiel neue Vokabeln aus dem Kurs. Für die Eingabe die arabische Tastatur in den Tastatur-Einstellungen des Tablets hinzufügen.</p>
     <form class="own" id="ownForm"><input id="ownAr" class="ar" lang="ar" dir="rtl" placeholder="مَكْتَب" autocomplete="off"><input id="ownDe" placeholder="Bedeutung (optional), z. B. Schreibtisch" autocomplete="off"><button class="btn" type="submit">Üben</button></form>`;
@@ -323,9 +323,14 @@ const $=id=>document.getElementById(id);
 function renderPrompt(){
   const c=current();
   const big=$('pBig');
-  if(S.quiz&&!S.compare&&!c.letter&&c.ar){big.textContent='Aus dem Kopf schreiben, dann „Vergleichen“';big.classList.add('hide');}
-  else{big.textContent=c.ar?shown(c.ar):'';big.classList.remove('hide');}
-  $('pDe').textContent=c.de;$('pTr').textContent=c.tr;
+  if(S.quiz&&!S.compare&&c.ar){
+    // Abfrage: nur die Aufgabe zeigen, die Lösung erst bei „Vergleichen“
+    big.textContent=c.letter?c.tr+' – '+c.formName:c.de;big.classList.add('hide');
+    $('pDe').textContent=c.letter?'':c.tr;$('pTr').textContent='Aus dem Kopf schreiben, dann „Vergleichen“';
+  } else {
+    big.textContent=c.ar?shown(c.ar):'';big.classList.remove('hide');
+    $('pDe').textContent=c.de;$('pTr').textContent=c.tr;
+  }
   const fm=$('forms');fm.hidden=S.tab!=='letters';
   if(S.tab==='letters'){const conn=LETTERS[S.letter][3];
     fm.innerHTML=FORMS.map(([k,n])=>{const dis=(conn===2&&(k==='ini'||k==='med'));return `<button class="chip" data-form="${k}" aria-pressed="${k===S.form}" ${dis?'disabled':''}>${n}</button>`}).join('');}
@@ -341,7 +346,7 @@ document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.cl
 $('mTrace').onclick=()=>{S.quiz=false;S.compare=false;go(true)};
 $('mQuiz').onclick=()=>{S.quiz=true;S.compare=false;go(true)};
 $('harakat').onclick=()=>{S.harakat=!S.harakat;go(true)};
-$('compare').onclick=()=>{S.compare=!S.compare;renderPrompt();drawOver();};
+$('compare').onclick=()=>{S.compare=!S.compare;renderPrompt();if(S.quiz)renderSide();drawOver();};
 $('tPen').onclick=()=>{S.tool='pen';renderPrompt()};
 $('tErase').onclick=()=>{S.tool='erase';renderPrompt()};
 $('undo').onclick=()=>{const p=page();if(p.hist.length){p.strokes=p.hist.pop();drawInk();}};
@@ -375,6 +380,7 @@ function praise(big,setName){
 }
 $('sound').onclick=()=>{S.sound=!S.sound;save();renderPrompt();if(S.sound)chime(false);};
 
+const quizHist=[];
 function step(d){
   const wrote=d>0&&page().strokes.length>=3;let finished=null;
   if(S.tab==='words'){const set=SETS.find(s=>s.id===S.set);let i=S.idx+d;let si=SETS.indexOf(set);
@@ -382,6 +388,13 @@ function step(d){
     if(i>=set.items.length){si=(si+1)%SETS.length;S.set=SETS[si].id;i=0;}
     if(i<0){si=(si-1+SETS.length)%SETS.length;S.set=SETS[si].id;i=SETS[si].items.length-1;}
     S.idx=i;}
+  else if(S.tab==='letters'&&S.quiz){
+    // Abfrage: „Weiter“ stellt eine zufällige Aufgabe, „Zurück“ geht zur vorigen
+    if(d<0){const h=quizHist.pop();if(!h)return;S.letter=h[0];S.form=h[1];}
+    else{quizHist.push([S.letter,S.form]);if(quizHist.length>50)quizHist.shift();
+      let l,f;do{l=Math.floor(Math.random()*LETTERS.length);f=FORMS[Math.floor(Math.random()*4)][0];}
+      while((LETTERS[l][3]===2&&(f==='ini'||f==='med'))||(l===S.letter&&f===S.form));
+      S.letter=l;S.form=f;}}
   else if(S.tab==='letters'){const order=FORMS.map(f=>f[0]).filter(formOk);let fi=order.indexOf(S.form)+d;
     if(fi>=order.length){S.letter=(S.letter+1)%LETTERS.length;S.form='iso';}
     else if(fi<0){S.letter=(S.letter-1+LETTERS.length)%LETTERS.length;const o2=FORMS.map(f=>f[0]).filter(formOk);S.form=o2[o2.length-1];}
