@@ -34,6 +34,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 .app{height:100%;display:grid;grid-template-columns:280px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:12px;padding-inline:16px;padding-block:12px;box-sizing:border-box}
+.app.noside{grid-template-columns:minmax(0,1fr)}
 .top{grid-column:1/-1;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .brand{display:flex;align-items:baseline;gap:10px}
 .brand .ar{font-size:30px;font-weight:600;color:var(--accent);line-height:1}
@@ -102,6 +103,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 /* Hochformat / schmal: alles passt auf einen Bildschirm, Listen wischt man seitlich */
 @media (max-width:860px){
   .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);gap:8px;padding-block:8px}
+  .app.noside{grid-template-rows:auto minmax(0,1fr)}
   .top{gap:8px 12px}
   .brand small,.pen{display:none}
   .tabs{margin-inline-start:auto}
@@ -159,6 +161,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
       <div class="spacer"></div>
       <div class="chips" id="forms" hidden></div>
       <button class="ghost" id="speak" hidden>Anhören</button>
+      <button class="ghost" id="pick" hidden>Buchstaben wählen</button>
       <span class="dir">← von rechts nach links</span>
     </div>
     <div class="stage" id="stage">
@@ -263,11 +266,11 @@ const strip=s=>s.replace(/[ً-ْٰ]/g,'');
 /* ---------- Speicher (nur Komfort) ---------- */
 const store={get(k,d){try{const v=localStorage.getItem('kurrasa.'+k);return v?JSON.parse(v):d}catch(e){return d}},
   set(k,v){try{localStorage.setItem('kurrasa.'+k,JSON.stringify(v))}catch(e){}}};
-const S=Object.assign({tab:'words',set:'basis',idx:0,letter:1,form:'iso',quiz:false,harakat:true,sound:true},store.get('ui',{}));
-S.compare=false;S.tool='pen';S.own=null;
+const S=Object.assign({tab:'words',set:'basis',idx:0,letter:1,form:'iso',quiz:true,harakat:true,sound:true},store.get('ui2',{}));
+S.compare=false;S.tool='pen';S.own=null;S.picker=false;
 let done=new Set(store.get('done',[]));
 let ownList=store.get('own',[]);
-const save=()=>store.set('ui',{tab:S.tab,set:S.set,idx:S.idx,letter:S.letter,form:S.form,quiz:S.quiz,harakat:S.harakat,sound:S.sound});
+const save=()=>store.set('ui2',{tab:S.tab,set:S.set,idx:S.idx,letter:S.letter,form:S.form,quiz:S.quiz,harakat:S.harakat,sound:S.sound});
 
 /* ---------- aktuelles Element ---------- */
 function current(){
@@ -316,7 +319,7 @@ side.addEventListener('click',e=>{const n=e.target.closest('.note');if(n){n.clas
 side.addEventListener('submit',e=>{e.preventDefault();const ar=document.getElementById('ownAr').value.trim();const de=document.getElementById('ownDe').value.trim();
   if(!ar)return;S.own={ar,de};ownList=[S.own,...ownList.filter(o=>o.ar!==ar)].slice(0,20);store.set('own',ownList);go();});
 
-function formOk(f){const c=LETTERS[S.letter][3];if(c===1)return true;if(c===2)return f==='iso'||f==='fin';return true;}
+function formOk(f){return LETTERS[S.letter][3]===1||f==='iso'||f==='fin';}
 
 /* ---------- Kopfzeile / Aufgabe ---------- */
 const $=id=>document.getElementById(id);
@@ -331,9 +334,12 @@ function renderPrompt(){
     big.textContent=c.ar?shown(c.ar):'';big.classList.remove('hide');
     $('pDe').textContent=c.de;$('pTr').textContent=c.tr;
   }
-  const fm=$('forms');fm.hidden=S.tab!=='letters';
+  const fm=$('forms');fm.hidden=S.tab!=='letters'||S.quiz;
+  const noside=S.tab==='letters'&&!S.picker;
+  document.querySelector('.app').classList.toggle('noside',noside);side.hidden=noside;
+  $('pick').hidden=S.tab!=='letters';$('pick').textContent=S.picker?'Auswahl ausblenden':'Buchstaben wählen';
   if(S.tab==='letters'){const conn=LETTERS[S.letter][3];
-    fm.innerHTML=FORMS.map(([k,n])=>{const dis=(conn===2&&(k==='ini'||k==='med'));return `<button class="chip" data-form="${k}" aria-pressed="${k===S.form}" ${dis?'disabled':''}>${n}</button>`}).join('');}
+    fm.innerHTML=FORMS.map(([k,n])=>{const dis=(conn!==1&&(k==='ini'||k==='med'));return `<button class="chip" data-form="${k}" aria-pressed="${k===S.form}" ${dis?'disabled':''}>${n}</button>`}).join('');}
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===S.tab));
   $('mTrace').setAttribute('aria-pressed',!S.quiz);$('mQuiz').setAttribute('aria-pressed',S.quiz);
   $('harakat').setAttribute('aria-pressed',S.harakat);$('compare').setAttribute('aria-pressed',S.compare);
@@ -342,7 +348,10 @@ function renderPrompt(){
   $('sound').setAttribute('aria-pressed',S.sound);
 }
 $('forms').addEventListener('click',e=>{const b=e.target.closest('[data-form]');if(!b||b.disabled)return;S.form=b.dataset.form;go();});
-document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;S.tab=b.dataset.tab;go();});
+document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;
+  if(b.dataset.tab==='letters'&&S.tab!=='letters')nextLetter();
+  S.tab=b.dataset.tab;S.picker=false;go();});
+$('pick').onclick=()=>{S.picker=!S.picker;renderSide();renderPrompt();};
 $('mTrace').onclick=()=>{S.quiz=false;S.compare=false;go(true)};
 $('mQuiz').onclick=()=>{S.quiz=true;S.compare=false;go(true)};
 $('harakat').onclick=()=>{S.harakat=!S.harakat;go(true)};
@@ -381,6 +390,13 @@ function praise(big,setName){
 $('sound').onclick=()=>{S.sound=!S.sound;save();renderPrompt();if(S.sound)chime(false);};
 
 const quizHist=[];
+// Zufällige Reihenfolge ohne Wiederholung: erst wenn alle Buchstaben-Formen dran waren, wird neu gemischt
+let bag=[];
+function nextLetter(){
+  if(!bag.length){LETTERS.forEach((L,l)=>FORMS.forEach(([f])=>{if(L[3]===1||f==='iso'||f==='fin')bag.push([l,f]);}));
+    for(let i=bag.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]];}
+    if(bag.length>1&&bag[bag.length-1][0]===S.letter&&bag[bag.length-1][1]===S.form)bag.unshift(bag.pop());}
+  const [l,f]=bag.pop();S.letter=l;S.form=f;}
 function step(d){
   const wrote=d>0&&page().strokes.length>=3;let finished=null;
   if(S.tab==='words'){const set=SETS.find(s=>s.id===S.set);let i=S.idx+d;let si=SETS.indexOf(set);
@@ -388,17 +404,10 @@ function step(d){
     if(i>=set.items.length){si=(si+1)%SETS.length;S.set=SETS[si].id;i=0;}
     if(i<0){si=(si-1+SETS.length)%SETS.length;S.set=SETS[si].id;i=SETS[si].items.length-1;}
     S.idx=i;}
-  else if(S.tab==='letters'&&S.quiz){
-    // Abfrage: „Weiter“ stellt eine zufällige Aufgabe, „Zurück“ geht zur vorigen
+  else if(S.tab==='letters'){
+    // „Weiter“ zieht eine zufällige Aufgabe, „Zurück“ geht zur vorigen
     if(d<0){const h=quizHist.pop();if(!h)return;S.letter=h[0];S.form=h[1];}
-    else{quizHist.push([S.letter,S.form]);if(quizHist.length>50)quizHist.shift();
-      let l,f;do{l=Math.floor(Math.random()*LETTERS.length);f=FORMS[Math.floor(Math.random()*4)][0];}
-      while((LETTERS[l][3]===2&&(f==='ini'||f==='med'))||(l===S.letter&&f===S.form));
-      S.letter=l;S.form=f;}}
-  else if(S.tab==='letters'){const order=FORMS.map(f=>f[0]).filter(formOk);let fi=order.indexOf(S.form)+d;
-    if(fi>=order.length){S.letter=(S.letter+1)%LETTERS.length;S.form='iso';}
-    else if(fi<0){S.letter=(S.letter-1+LETTERS.length)%LETTERS.length;const o2=FORMS.map(f=>f[0]).filter(formOk);S.form=o2[o2.length-1];}
-    else S.form=order[fi];}
+    else{quizHist.push([S.letter,S.form]);if(quizHist.length>50)quizHist.shift();nextLetter();}}
   else{if(!ownList.length)return;let i=ownList.findIndex(o=>S.own&&o.ar===S.own.ar)+d;i=(i+ownList.length)%ownList.length;S.own=ownList[i];}
   go();
   if(wrote)praise(!!finished,finished);
@@ -422,13 +431,11 @@ function size(){const r=stage.getBoundingClientRect();DPR=window.devicePixelRati
 function layout(){
   const c=current();const text=c.ar?shown(c.ar):'';const boxes=[];const right=W-30,left=10;let fs;
   xBg.direction='rtl';
-  if(c.letter){const cols=W>H*1.1?3:2,rows=cols===3?2:3;const bw=(right-left)/cols,bh=(H-12)/rows;
-    const ops=[.34,.2,.1];
-    for(let r=0;r<rows;r++)for(let k=0;k<cols;k++){const i=r*cols+k;boxes.push({x:right-(k+1)*bw,y:6+r*bh,w:bw,h:bh,op:S.quiz?0:(ops[i]||0),row:r});}
-    fs=Math.min(bh*.5,bw*.62);xBg.font=arFont(fs);const tw=xBg.measureText(text).width;if(tw>bw*.8)fs*=bw*.8/tw;}
-  else{const rows=H>540?4:3;const bh=(H-12)/rows;const ops=[.3,.14,0,0];
-    for(let r=0;r<rows;r++)boxes.push({x:left,y:6+r*bh,w:right-left,h:bh,op:S.quiz?0:ops[r],row:r});
-    fs=bh*.44;xBg.font=arFont(fs);const tw=text?xBg.measureText(text).width:0;if(tw>(right-left)*.9)fs*=(right-left)*.9/tw;}
+  // Eine einzige Schreibzeile, senkrecht mittig auf dem Blatt
+  const bh=Math.min(H-12,360),bw=right-left;
+  boxes.push({x:left,y:(H-bh)/2,w:bw,h:bh,op:S.quiz?0:.3,row:0});
+  fs=bh*(c.letter?.46:.42);xBg.font=arFont(fs);
+  const tw=text?xBg.measureText(text).width:0;if(tw>bw*.9)fs*=bw*.9/tw;
   xBg.font=arFont(fs);const m=xBg.measureText('ا');const asc=m.actualBoundingBoxAscent||fs*.7;
   boxes.forEach(b=>b.base=b.y+b.h*.6);
   LAY={boxes,fs,asc,text,right};
@@ -498,6 +505,7 @@ new ResizeObserver(()=>{const r=stage.getBoundingClientRect();if(Math.round(r.wi
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{drawBg();drawInk();drawOver();});
 new MutationObserver(()=>{drawBg();drawInk();drawOver();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
+if(S.tab==='letters')nextLetter();
 renderSide();renderPrompt();renderToday();size();
 if(document.fonts){document.fonts.load(arFont(40),'كتاب').then(()=>{layout();drawBg();drawOver();}).catch(()=>{});
   document.fonts.ready.then(()=>{layout();drawBg();drawOver();});}
